@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Voicebox — Text to Speech</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1A1F2E;
+    --ink-deep:#11141E;
+    --panel:#222840;
+    --cream:#F2EFE9;
+    --slate:#8B92A8;
+    --amber:#E8A33D;
+    --coral:#D6634A;
+    --line: rgba(242,239,233,0.10);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(232,163,61,0.08), transparent 60%),
+      var(--ink);
+    color:var(--cream);
+    font-family:'Space Grotesk', sans-serif;
+    min-height:100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:48px 20px 80px;
+  }
+
+  .wrap{ width:100%; max-width:760px; }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--amber);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .eyebrow .dot{
+    width:7px; height:7px; border-radius:50%;
+    background:var(--coral);
+    box-shadow:0 0 0 0 rgba(214,99,74,0.6);
+  }
+  .eyebrow .dot.live{
+    animation: pulse-dot 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse-dot{
+    0%,100%{ box-shadow:0 0 0 0 rgba(214,99,74,0.55); }
+    50%{ box-shadow:0 0 0 6px rgba(214,99,74,0); }
+  }
+
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(34px, 5vw, 48px);
+    line-height:1.05;
+    margin:0 0 10px;
+    letter-spacing:-0.01em;
+  }
+  h1 em{
+    font-style:italic;
+    color:var(--amber);
+  }
+
+  .sub{
+    color:var(--slate);
+    font-size:15px;
+    line-height:1.6;
+    max-width:480px;
+    margin:0 0 36px;
+  }
+
+  /* ---- Waveform signature ---- */
+  .waveform{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    height:64px;
+    padding:0 4px;
+    margin-bottom:28px;
+  }
+  .waveform span{
+    flex:1;
+    background: linear-gradient(180deg, var(--amber), var(--coral));
+    border-radius:3px;
+    height:6px;
+    opacity:0.35;
+    transform-origin:center;
+    transition:opacity 0.2s ease;
+  }
+  .waveform.active span{ opacity:1; }
+
+  /* ---- Panel ---- */
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:28px;
+    box-shadow:0 30px 60px -30px rgba(0,0,0,0.6);
+  }
+
+  textarea{
+    width:100%;
+    min-height:170px;
+    background:var(--ink-deep);
+    border:1px solid var(--line);
+    border-radius:12px;
+    color:var(--cream);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:16px;
+    line-height:1.6;
+    padding:18px;
+    resize:vertical;
+    outline:none;
+    transition:border-color 0.2s ease;
+  }
+  textarea::placeholder{ color:#5A6178; }
+  textarea:focus{ border-color:var(--amber); }
+  textarea:focus-visible{ outline:2px solid var(--amber); outline-offset:2px; }
+
+  .meta-row{
+    display:flex;
+    justify-content:space-between;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--slate);
+    margin-top:8px;
+    letter-spacing:0.03em;
+  }
+
+  .controls{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px;
+    margin-top:24px;
+  }
+  @media (max-width:520px){
+    .controls{ grid-template-columns:1fr; }
+  }
+
+  .field label{
+    display:flex;
+    justify-content:space-between;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--slate);
+    margin-bottom:10px;
+  }
+  .field label .val{ color:var(--amber); }
+
+  select{
+    width:100%;
+    background:var(--ink-deep);
+    border:1px solid var(--line);
+    color:var(--cream);
+    border-radius:10px;
+    padding:11px 12px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14px;
+    outline:none;
+    cursor:pointer;
+  }
+  select:focus-visible{ outline:2px solid var(--amber); outline-offset:2px; }
+
+  input[type="range"]{
+    -webkit-appearance:none;
+    width:100%;
+    height:4px;
+    background:var(--line);
+    border-radius:4px;
+    outline:none;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:16px; height:16px;
+    border-radius:50%;
+    background:var(--amber);
+    cursor:pointer;
+    border:2px solid var(--ink-deep);
+  }
+  input[type="range"]::-moz-range-thumb{
+    width:16px; height:16px;
+    border-radius:50%;
+    background:var(--amber);
+    cursor:pointer;
+    border:2px solid var(--ink-deep);
+  }
+  input[type="range"]:focus-visible{ outline:2px solid var(--amber); outline-offset:4px; }
+
+  .actions{
+    display:flex;
+    gap:12px;
+    margin-top:28px;
+    flex-wrap:wrap;
+  }
+
+  button{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    border:none;
+    border-radius:10px;
+    padding:13px 22px;
+    cursor:pointer;
+    transition:transform 0.12s ease, opacity 0.12s ease, background 0.2s ease;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+  }
+  button:active{ transform:scale(0.97); }
+  button:disabled{ opacity:0.4; cursor:not-allowed; }
+  button:focus-visible{ outline:2px solid var(--amber); outline-offset:2px; }
+
+  #playBtn{
+    background:var(--amber);
+    color:var(--ink-deep);
+    flex:1;
+    justify-content:center;
+  }
+  #playBtn:hover:not(:disabled){ background:#f0ae4d; }
+
+  #pauseBtn, #stopBtn{
+    background:transparent;
+    color:var(--cream);
+    border:1px solid var(--line);
+  }
+  #pauseBtn:hover:not(:disabled), #stopBtn:hover:not(:disabled){
+    border-color:var(--slate);
+  }
+
+  .status{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--slate);
+    margin-top:18px;
+    min-height:16px;
+  }
+  .status.speaking{ color:var(--amber); }
+
+  .unsupported{
+    background:rgba(214,99,74,0.12);
+    border:1px solid rgba(214,99,74,0.35);
+    color:var(--coral);
+    padding:16px 18px;
+    border-radius:12px;
+    font-size:14px;
+    line-height:1.5;
+    margin-top:18px;
+    display:none;
+  }
+
+  footer{
+    margin-top:30px;
+    color:var(--slate);
+    font-size:12px;
+    font-family:'JetBrains Mono', monospace;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="eyebrow"><span class="dot" id="liveDot"></span> ON AIR · BROWSER SYNTHESIS</div>
+
+  <h1>Type it. <em>Hear it.</em></h1>
+  <p class="sub">Paste any text and Voicebox reads it aloud using your browser's built-in voices — nothing uploaded, nothing stored, runs fully offline once the page is loaded.</p>
+
+  <div class="waveform" id="waveform"></div>
+
+  <div class="panel">
+    <textarea id="textInput" placeholder="Start typing, or paste a paragraph, a script, an email draft — anything you'd rather listen to than read…"></textarea>
+    <div class="meta-row">
+      <span id="charCount">0 characters</span>
+      <span id="estTime">~0:00 at current rate</span>
+    </div>
+
+    <div class="controls">
+      <div class="field">
+        <label>Voice</label>
+        <select id="voiceSelect"></select>
+      </div>
+      <div class="field">
+        <label>Rate <span class="val" id="rateVal">1.0×</span></label>
+        <input type="range" id="rateInput" min="0.5" max="2" step="0.1" value="1">
+      </div>
+      <div class="field">
+        <label>Pitch <span class="val" id="pitchVal">1.0</span></label>
+        <input type="range" id="pitchInput" min="0" max="2" step="0.1" value="1">
+      </div>
+      <div class="field">
+        <label>Volume <span class="val" id="volVal">100%</span></label>
+        <input type="range" id="volInput" min="0" max="1" step="0.05" value="1">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="playBtn">▶ Speak</button>
+      <button id="pauseBtn" disabled>⏸ Pause</button>
+      <button id="stopBtn" disabled>⏹ Stop</button>
+    </div>
+
+    <div class="status" id="statusLine">Ready.</div>
+    <div class="unsupported" id="unsupportedMsg">
+      Your browser doesn't support speech synthesis. Try the latest Chrome, Edge, or Safari.
+    </div>
+  </div>
+
+  <footer>NO DATA LEAVES YOUR BROWSER · POWERED BY THE WEB SPEECH API</footer>
+</div>
+
+<script>
+  // Build waveform bars
+  const waveform = document.getElementById('waveform');
+  const BAR_COUNT = 48;
+  const bars = [];
+  for(let i=0;i<BAR_COUNT;i++){
+    const bar = document.createElement('span');
+    waveform.appendChild(bar);
+    bars.push(bar);
+  }
+
+  function randomizeBars(active){
+    bars.forEach(b=>{
+      if(active){
+        const h = 6 + Math.random()*52;
+        b.style.height = h+'px';
+      } else {
+        b.style.height = '6px';
+      }
+    });
+  }
+  randomizeBars(false);
+
+  let waveformTimer = null;
+  function startWaveform(){
+    waveform.classList.add('active');
+    if(waveformTimer) clearInterval(waveformTimer);
+    waveformTimer = setInterval(()=>randomizeBars(true), 110);
+  }
+  function stopWaveform(){
+    waveform.classList.remove('active');
+    if(waveformTimer) clearInterval(waveformTimer);
+    waveformTimer = null;
+    randomizeBars(false);
+  }
+
+  const liveDot = document.getElementById('liveDot');
+
+  const textInput = document.getElementById('textInput');
+  const charCount = document.getElementById('charCount');
+  const estTime = document.getElementById('estTime');
+  const voiceSelect = document.getElementById('voiceSelect');
+  const rateInput = document.getElementById('rateInput');
+  const pitchInput = document.getElementById('pitchInput');
+  const volInput = document.getElementById('volInput');
+  const rateVal = document.getElementById('rateVal');
+  const pitchVal = document.getElementById('pitchVal');
+  const volVal = document.getElementById('volVal');
+  const playBtn = document.getElementById('playBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const statusLine = document.getElementById('statusLine');
+  const unsupportedMsg = document.getElementById('unsupportedMsg');
+
+  const synth = window.speechSynthesis;
+  let voices = [];
+  let utterance = null;
+  let isPaused = false;
+
+  if(!('speechSynthesis' in window)){
+    unsupportedMsg.style.display = 'block';
+    playBtn.disabled = true;
+  }
+
+  function populateVoices(){
+    voices = synth.getVoices();
+    voiceSelect.innerHTML = '';
+    if(voices.length === 0){
+      const opt = document.createElement('option');
+      opt.textContent = 'Loading voices…';
+      voiceSelect.appendChild(opt);
+      return;
+    }
+    voices.forEach((v, i)=>{
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `${v.name} (${v.lang})`;
+      voiceSelect.appendChild(opt);
+    });
+    const enIndex = voices.findIndex(v => v.lang && v.lang.startsWith('en') && v.default);
+    if(enIndex >= 0) voiceSelect.value = enIndex;
+  }
+
+  populateVoices();
+  if(synth.onvoiceschanged !== undefined){
+    synth.onvoiceschanged = populateVoices;
+  }
+
+  function updateMeta(){
+    const text = textInput.value;
+    charCount.textContent = `${text.length} character${text.length===1?'':'s'}`;
+    const words = text.trim().split(/\s+/).filter(Boolean).length;
+    const rate = parseFloat(rateInput.value);
+    const wpm = 150 * rate;
+    const seconds = words > 0 ? Math.round((words / wpm) * 60) : 0;
+    const m = Math.floor(seconds/60);
+    const s = String(seconds%60).padStart(2,'0');
+    estTime.textContent = `~${m}:${s} at current rate`;
+  }
+
+  textInput.addEventListener('input', updateMeta);
+  rateInput.addEventListener('input', ()=>{
+    rateVal.textContent = parseFloat(rateInput.value).toFixed(1)+'×';
+    updateMeta();
+  });
+  pitchInput.addEventListener('input', ()=>{
+    pitchVal.textContent = parseFloat(pitchInput.value).toFixed(1);
+  });
+  volInput.addEventListener('input', ()=>{
+    volVal.textContent = Math.round(parseFloat(volInput.value)*100)+'%';
+  });
+
+  updateMeta();
+
+  function setSpeakingUI(speaking){
+    liveDot.classList.toggle('live', speaking);
+    statusLine.classList.toggle('speaking', speaking);
+    playBtn.disabled = speaking;
+    pauseBtn.disabled = !speaking;
+    stopBtn.disabled = !speaking;
+    if(speaking){ startWaveform(); } else { stopWaveform(); }
+  }
+
+  playBtn.addEventListener('click', ()=>{
+    const text = textInput.value.trim();
+    if(!text){
+      statusLine.textContent = 'Type something first — the page can\'t read silence.';
+      return;
+    }
+    synth.cancel();
+
+    utterance = new SpeechSynthesisUtterance(text);
+    const selectedVoice = voices[voiceSelect.value];
+    if(selectedVoice) utterance.voice = selectedVoice;
+    utterance.rate = parseFloat(rateInput.value);
+    utterance.pitch = parseFloat(pitchInput.value);
+    utterance.volume = parseFloat(volInput.value);
+
+    utterance.onstart = ()=>{
+      isPaused = false;
+      statusLine.textContent = 'Speaking…';
+      setSpeakingUI(true);
+    };
+    utterance.onend = ()=>{
+      statusLine.textContent = 'Finished.';
+      setSpeakingUI(false);
+    };
+    utterance.onerror = (e)=>{
+      statusLine.textContent = 'Something interrupted playback. Try again.';
+      setSpeakingUI(false);
+    };
+    utterance.onpause = ()=>{
+      statusLine.textContent = 'Paused.';
+      stopWaveform();
+    };
+    utterance.onresume = ()=>{
+      statusLine.textContent = 'Speaking…';
+      startWaveform();
+    };
+
+    synth.speak(utterance);
+  });
+
+  pauseBtn.addEventListener('click', ()=>{
+    if(synth.speaking && !isPaused){
+      synth.pause();
+      isPaused = true;
+      pauseBtn.textContent = '▶ Resume';
+    } else if(isPaused){
+      synth.resume();
+      isPaused = false;
+      pauseBtn.textContent = '⏸ Pause';
+    }
+  });
+
+  stopBtn.addEventListener('click', ()=>{
+    synth.cancel();
+    isPaused = false;
+    pauseBtn.textContent = '⏸ Pause';
+    statusLine.textContent = 'Stopped.';
+    setSpeakingUI(false);
+  });
+
+</script>
+
+</body>
+</html>
